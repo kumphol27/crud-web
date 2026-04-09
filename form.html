@@ -1,26 +1,81 @@
-<!DOCTYPE html>
-<html lang="th">
+<!doctype html>
+<html lang="th" class="h-full">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>เพิ่มข้อมูล</title>
+
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script src="https://cdn.jsdelivr.net/npm/lucide@0.263.0/dist/umd/lucide.min.js"></script>
+
+  <!-- ✅ Supabase -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+
+  <style>
+    body { background:#0f0f14; font-family: 'Noto Sans Thai', sans-serif; }
+    .file-drop { border:2px dashed #27272a; transition:.2s }
+    .file-drop.has-file { border-color:#22c55e; }
+  </style>
 </head>
 
-<body>
+<body class="p-6">
 
-<h2>เพิ่มข้อมูล</h2>
+<div class="max-w-lg mx-auto bg-[#18181f] p-6 rounded-xl border border-[#27272a]">
 
-<input id="title" placeholder="หัวข้อ"><br><br>
-<textarea id="description" placeholder="รายละเอียด"></textarea><br><br>
+  <h2 class="text-xl text-white mb-4">เพิ่มข้อมูล</h2>
 
-<input type="file" id="image_url"><br><br>
-<input type="file" id="pdf_url"><br><br>
+  <input id="title" placeholder="หัวข้อ"
+    class="w-full p-3 mb-3 bg-[#0f0f14] border border-[#27272a] text-white rounded">
 
-<button onclick="save()">บันทึก</button>
+  <textarea id="description" placeholder="รายละเอียด"
+    class="w-full p-3 mb-4 bg-[#0f0f14] border border-[#27272a] text-white rounded"></textarea>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
-<script src="supabase.js"></script>
+  <!-- IMAGE -->
+  <div class="file-drop p-4 text-center mb-3 cursor-pointer"
+    onclick="document.getElementById('image_url').click()">
+    <input type="file" id="image_url" hidden onchange="handleFile(this,'image-name')">
+    <p class="text-gray-400">เลือกรูป</p>
+    <p id="image-name" class="text-green-400 text-sm"></p>
+  </div>
+
+  <!-- PDF -->
+  <div class="file-drop p-4 text-center mb-5 cursor-pointer"
+    onclick="document.getElementById('pdf_url').click()">
+    <input type="file" id="pdf_url" hidden onchange="handleFile(this,'pdf-name')">
+    <p class="text-gray-400">เลือก PDF</p>
+    <p id="pdf-name" class="text-green-400 text-sm"></p>
+  </div>
+
+  <button onclick="save()"
+    class="w-full bg-indigo-600 hover:bg-indigo-700 text-white p-3 rounded">
+    บันทึก
+  </button>
+
+</div>
 
 <script>
+/* =======================
+   🔥 CONFIG SUPABASE
+======================= */
+const SUPABASE_URL = "https://cicvdydnrgrgjdpeufuc.supabase.co";
+const SUPABASE_KEY = "sb_publishable_KRMgo0_VGMTqToKk-Ur-yQ_FUFOgXFm";
+
+const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+
+/* =======================
+   🔥 UI FILE
+======================= */
+function handleFile(input, nameId) {
+  if (input.files[0]) {
+    document.getElementById(nameId).innerText = input.files[0].name;
+  }
+}
+
+
+/* =======================
+   🔥 SAVE FUNCTION
+======================= */
 async function save() {
   try {
     const title = document.getElementById("title").value.trim();
@@ -37,18 +92,16 @@ async function save() {
     let imageUrl = "";
     let pdfUrl = "";
 
-    // 🔥 function แปลงชื่อไฟล์ (ใช้ซ้ำได้)
+    // 🔥 แปลงชื่อไฟล์
     const makeSafeName = (name) => {
-      return name
-        .toLowerCase()
+      return name.toLowerCase()
         .replace(/\s+/g, "_")
         .replace(/[^a-z0-9.]/g, "");
     };
 
     // 🔥 upload image
     if (imageFile) {
-      const safeName = makeSafeName(imageFile.name);
-      const filePath = `images/${Date.now()}-${safeName}`;
+      const filePath = `images/${Date.now()}-${makeSafeName(imageFile.name)}`;
 
       const { data, error } = await db.storage
         .from("files")
@@ -61,8 +114,7 @@ async function save() {
 
     // 🔥 upload pdf
     if (pdfFile) {
-      const safeName = makeSafeName(pdfFile.name);
-      const filePath = `pdf/${Date.now()}-${safeName}`;
+      const filePath = `pdf/${Date.now()}-${makeSafeName(pdfFile.name)}`;
 
       const { data, error } = await db.storage
         .from("files")
@@ -75,12 +127,7 @@ async function save() {
 
     // 🔥 insert database
     const { error } = await db.from("manuals").insert([
-      {
-        title,
-        description,
-        image_url: imageUrl,
-        pdf_url: pdfUrl
-      }
+      { title, description, image_url: imageUrl, pdf_url: pdfUrl }
     ]);
 
     if (error) throw error;
