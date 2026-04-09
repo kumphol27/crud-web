@@ -2,7 +2,7 @@
 <html>
 <body>
 
-<h2>เพิ่มข้อมูล</h2>
+<h2>เพิ่มข้อมูล</h2
 
 <input id="title" placeholder="หัวข้อ"><br>
 <textarea id="description"></textarea><br>
@@ -18,41 +18,57 @@ const params = new URLSearchParams(window.location.search);
 const id = params.get("id");
 
 async function save() {
-  const title = document.getElementById("title").value;
-  const description = document.getElementById("description").value;
+  try {
+    const title = document.getElementById("title").value;
+    const description = document.getElementById("description").value;
 
-  let imageUrl = "";
-  let pdfUrl = "";
+    const imageFile = document.getElementById("image").files[0];
+    const pdfFile = document.getElementById("pdf").files[0];
 
-  const imageFile = document.getElementById("image").files[0];
-  const pdfFile = document.getElementById("pdf").files[0];
+    let imageUrl = "";
+    let pdfUrl = "";
 
-  if (imageFile) {
-    const { data } = await supabase.storage
-      .from("files")
-      .upload(`images/${Date.now()}-${imageFile.name}`, imageFile);
+    // ✅ upload image
+    if (imageFile) {
+      const { data, error } = await supabase.storage
+        .from("files")
+        .upload(`images/${Date.now()}-${imageFile.name}`, imageFile);
 
-    imageUrl = `https://cicvdydnrgrgjdpeufuc.supabase.co/storage/v1/object/public/${data.path}`;
-  }
+      if (error) throw error;
 
-  if (pdfFile) {
-    const { data } = await supabase.storage
-      .from("files")
-      .upload(`pdf/${Date.now()}-${pdfFile.name}`, pdfFile);
+      imageUrl = `${SUPABASE_URL}/storage/v1/object/public/${data.path}`;
+    }
 
-    pdfUrl = `https://cicvdydnrgrgjdpeufuc.supabase.co/storage/v1/object/public/${data.path}`;
-  }
+    // ✅ upload pdf
+    if (pdfFile) {
+      const { data, error } = await supabase.storage
+        .from("files")
+        .upload(`pdf/${Date.now()}-${pdfFile.name}`, pdfFile);
 
-  if (id) {
-    await supabase.from("manuals").update({ title, description }).eq("id", id);
-  } else {
-    await supabase.from("manuals").insert([
-      { title, description, image_url: imageUrl, pdf_url: pdfUrl }
+      if (error) throw error;
+
+      pdfUrl = `${SUPABASE_URL}/storage/v1/object/public/${data.path}`;
+    }
+
+    // ✅ insert database
+    const { error } = await supabase.from("manuals").insert([
+      {
+        title,
+        description,
+        image_url: imageUrl,
+        pdf_url: pdfUrl
+      }
     ]);
-  }
 
-  alert("สำเร็จ");
-  window.location.href = "index.html";
+    if (error) throw error;
+
+    alert("บันทึกสำเร็จ ✅");
+    window.location.href = "index.html";
+
+  } catch (err) {
+    console.error(err);
+    alert("เกิดข้อผิดพลาด: " + err.message);
+  }
 }
 </script>
 
