@@ -37,27 +37,39 @@ async function save() {
     let imageUrl = "";
     let pdfUrl = "";
 
-    // upload image
-    if (imageFile) {
-      const { data, error } = await db.storage
-        .from("files")
-        .upload(`images/${Date.now()}-${imageFile.name}`, imageFile);
+   if (imageFile) {
+  const safeName = imageFile.name
+    .toLowerCase()
+    .replace(/\s+/g, "_")         
+    .replace(/[^a-z0-9.]/g, "");   
 
-      if (error) throw error;
+  const filePath = `images/${Date.now()}-${safeName}`;
 
-      imageUrl = `${SUPABASE_URL}/storage/v1/object/public/${data.path}`;
-    }
+  const { data, error } = await db.storage
+    .from("files")
+    .upload(filePath, imageFile);
 
-    // upload pdf
+  if (error) throw error;
+
+  imageUrl = `${SUPABASE_URL}/storage/v1/object/public/${data.path}`;
+}
+
     if (pdfFile) {
-      const { data, error } = await db.storage
-        .from("files")
-        .upload(`pdf/${Date.now()}-${pdfFile.name}`, pdfFile);
+  const safePdf = pdfFile.name
+    .toLowerCase()
+    .replace(/\s+/g, "_")
+    .replace(/[^a-z0-9.]/g, "");
 
-      if (error) throw error;
+  const filePath = `pdf/${Date.now()}-${safePdf}`;
 
-      pdfUrl = `${SUPABASE_URL}/storage/v1/object/public/${data.path}`;
-    }
+  const { data, error } = await db.storage
+    .from("files")
+    .upload(filePath, pdfFile);
+
+  if (error) throw error;
+
+  pdfUrl = `${SUPABASE_URL}/storage/v1/object/public/${data.path}`;
+}
 
     // insert
     const { error } = await db.from("manuals").insert([
