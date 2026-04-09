@@ -37,53 +37,60 @@ async function save() {
     let imageUrl = "";
     let pdfUrl = "";
 
-   if (imageFile) {
-  const safeName = imageFile.name
-    .toLowerCase()
-    .replace(/\s+/g, "_")         
-    .replace(/[^a-z0-9.]/g, "");   
+    // 🔥 function แปลงชื่อไฟล์ (ใช้ซ้ำได้)
+    const makeSafeName = (name) => {
+      return name
+        .toLowerCase()
+        .replace(/\s+/g, "_")
+        .replace(/[^a-z0-9.]/g, "");
+    };
 
-  const filePath = `images/${Date.now()}-${safeName}`;
+    // 🔥 upload image
+    if (imageFile) {
+      const safeName = makeSafeName(imageFile.name);
+      const filePath = `images/${Date.now()}-${safeName}`;
 
-  const { data, error } = await db.storage
-    .from("files")
-    .upload(filePath, imageFile);
+      const { data, error } = await db.storage
+        .from("files")
+        .upload(filePath, imageFile);
 
-  if (error) throw error;
+      if (error) throw error;
 
-  imageUrl = `${SUPABASE_URL}/storage/v1/object/public/${data.path}`;
-}
+      imageUrl = `${SUPABASE_URL}/storage/v1/object/public/${data.path}`;
+    }
 
+    // 🔥 upload pdf
     if (pdfFile) {
-  const safePdf = pdfFile.name
-    .toLowerCase()
-    .replace(/\s+/g, "_")
-    .replace(/[^a-z0-9.]/g, "");
+      const safeName = makeSafeName(pdfFile.name);
+      const filePath = `pdf/${Date.now()}-${safeName}`;
 
-  const filePath = `pdf/${Date.now()}-${safePdf}`;
+      const { data, error } = await db.storage
+        .from("files")
+        .upload(filePath, pdfFile);
 
-  const { data, error } = await db.storage
-    .from("files")
-    .upload(filePath, pdfFile);
+      if (error) throw error;
 
-  if (error) throw error;
+      pdfUrl = `${SUPABASE_URL}/storage/v1/object/public/${data.path}`;
+    }
 
-  pdfUrl = `${SUPABASE_URL}/storage/v1/object/public/${data.path}`;
-}
-
-    // insert
+    // 🔥 insert database
     const { error } = await db.from("manuals").insert([
-      { title, description, image_url: imageUrl, pdf_url: pdfUrl }
+      {
+        title,
+        description,
+        image_url: imageUrl,
+        pdf_url: pdfUrl
+      }
     ]);
 
     if (error) throw error;
 
-    alert("บันทึกสำเร็จ");
+    alert("บันทึกสำเร็จ ✅");
     window.location.href = "index.html";
 
   } catch (err) {
-    alert(err.message);
     console.error(err);
+    alert("ERROR: " + err.message);
   }
 }
 </script>
