@@ -10,7 +10,6 @@
 <h2>เพิ่มข้อมูล</h2>
 
 <input id="title" placeholder="หัวข้อ"><br><br>
-
 <textarea id="description" placeholder="รายละเอียด"></textarea><br><br>
 
 <input type="file" id="image_url"><br><br>
@@ -22,40 +21,25 @@
 <script src="supabase.js"></script>
 
 <script>
-const params = new URLSearchParams(window.location.search);
-const id = params.get("id");
-
 async function save() {
   try {
-    const titleEl = document.getElementById("title");
-    const descEl = document.getElementById("description");
-
-    // ✅ กัน null
-    if (!titleEl || !descEl) {
-      alert("ไม่พบ input ในหน้า");
-      return;
-    }
-
-    const title = titleEl.value.trim();
-    const description = descEl.value.trim();
+    const title = document.getElementById("title").value.trim();
+    const description = document.getElementById("description").value.trim();
 
     if (!title) {
       alert("กรุณากรอกหัวข้อ");
       return;
     }
 
-    const imageInput = document.getElementById("image_url");
-    const pdfInput = document.getElementById("pdf_url");
-
-    const imageFile = imageInput.files[0];
-    const pdfFile = pdfInput.files[0];
+    const imageFile = document.getElementById("image_url").files[0];
+    const pdfFile = document.getElementById("pdf_url").files[0];
 
     let imageUrl = "";
     let pdfUrl = "";
 
-    // 🔥 upload image
+    // upload image
     if (imageFile) {
-      const { data, error } = await supabase.storage
+      const { data, error } = await db.storage
         .from("files")
         .upload(`images/${Date.now()}-${imageFile.name}`, imageFile);
 
@@ -64,9 +48,9 @@ async function save() {
       imageUrl = `${SUPABASE_URL}/storage/v1/object/public/${data.path}`;
     }
 
-    // 🔥 upload pdf
+    // upload pdf
     if (pdfFile) {
-      const { data, error } = await supabase.storage
+      const { data, error } = await db.storage
         .from("files")
         .upload(`pdf/${Date.now()}-${pdfFile.name}`, pdfFile);
 
@@ -75,24 +59,19 @@ async function save() {
       pdfUrl = `${SUPABASE_URL}/storage/v1/object/public/${data.path}`;
     }
 
-    // 🔥 insert database
-    const { error } = await supabase.from("manuals").insert([
-      {
-        title: title,
-        description: description,
-        image_url: imageUrl,
-        pdf_url: pdfUrl
-      }
+    // insert
+    const { error } = await db.from("manuals").insert([
+      { title, description, image_url: imageUrl, pdf_url: pdfUrl }
     ]);
 
     if (error) throw error;
 
-    alert("บันทึกสำเร็จ ✅");
+    alert("บันทึกสำเร็จ");
     window.location.href = "index.html";
 
   } catch (err) {
+    alert(err.message);
     console.error(err);
-    alert("เกิดข้อผิดพลาด: " + err.message);
   }
 }
 </script>
