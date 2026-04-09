@@ -1,47 +1,123 @@
-<!DOCTYPE html>
-<html>
-<body>
+<!doctype html>
+<html lang="th" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>รายการข้อมูล</title>
 
-<h2>รายการข้อมูล</h2>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script src="https://cdn.jsdelivr.net/npm/lucide@0.263.0/dist/umd/lucide.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
 
-<input type="text" id="search" placeholder="ค้นหา..." onkeyup="loadData()">
-<button onclick="goAdd()">เพิ่ม</button>
+  <style>
+    body { background:#0f0f14; font-family:'Noto Sans Thai',sans-serif; }
+    .btn { transition:.2s }
+    .btn:hover { transform: translateY(-2px); }
+  </style>
+</head>
 
-<div id="list"></div>
+<body class="p-6">
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
-<script src="supabase.js"></script>
+<div class="max-w-5xl mx-auto">
+
+  <!-- HEADER -->
+  <div class="flex justify-between items-center mb-6">
+    <h1 class="text-2xl text-white">รายการข้อมูล</h1>
+    <button onclick="goAdd()"
+      class="btn bg-indigo-600 text-white px-4 py-2 rounded">
+      + เพิ่ม
+    </button>
+  </div>
+
+  <!-- SEARCH -->
+  <input type="text" id="search"
+    placeholder="ค้นหา..."
+    onkeyup="loadData()"
+    class="w-full mb-6 p-3 bg-[#18181f] text-white border border-[#27272a] rounded">
+
+  <!-- LIST -->
+  <div id="list" class="grid md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+
+</div>
 
 <script>
+/* =======================
+   🔥 CONFIG
+======================= */
+const SUPABASE_URL = "https://cicvdydnrgrgjdpeufuc.supabase.co";
+const SUPABASE_KEY = "sb_publishable_KRMgo0_VGMTqToKk-Ur-yQ_FUFOgXFm";
+
+const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+
+/* =======================
+   🔥 LOAD DATA
+======================= */
 async function loadData() {
   const keyword = document.getElementById("search").value;
 
-  let query = db.from("manuals").select("*");
+  let query = db.from("manuals").select("*").order("id", { ascending: false });
 
   if (keyword) {
     query = query.ilike("title", `%${keyword}%`);
   }
 
-  const { data } = await query;
+  const { data, error } = await query;
+
+  if (error) {
+    alert(error.message);
+    return;
+  }
 
   let html = "";
 
-  data.forEach(item => {
-    html += `
-      <div>
-        <h3>${item.title}</h3>
-        <img src="${item.image_url}" width="120"/>
-        <p>${item.description}</p>
-        <a href="${item.pdf_url}" target="_blank">PDF</a><br>
-        <button onclick="edit('${item.id}')">แก้ไข</button>
-        <button onclick="del('${item.id}')">ลบ</button>
-      </div>
-    `;
-  });
+  if (!data || data.length === 0) {
+    html = `<p class="text-gray-400">ไม่มีข้อมูล</p>`;
+  } else {
+    data.forEach(item => {
+      html += `
+        <div class="bg-[#18181f] border border-[#27272a] rounded-xl overflow-hidden">
+
+          <img src="${item.image_url || ''}" 
+               class="w-full h-40 object-cover"
+               onerror="this.style.display='none'">
+
+          <div class="p-4">
+            <h3 class="text-white font-semibold mb-1">${item.title}</h3>
+            <p class="text-gray-400 text-sm mb-3">${item.description || ''}</p>
+
+            <div class="flex gap-2">
+
+              <a href="${item.pdf_url || '#'}" target="_blank"
+                class="flex-1 bg-indigo-600 text-white text-xs p-2 rounded text-center">
+                PDF
+              </a>
+
+              <button onclick="edit('${item.id}')"
+                class="flex-1 border border-indigo-500 text-indigo-400 text-xs p-2 rounded">
+                แก้ไข
+              </button>
+
+              <button onclick="del('${item.id}')"
+                class="bg-red-500 text-white px-3 rounded">
+                ลบ
+              </button>
+
+            </div>
+          </div>
+
+        </div>
+      `;
+    });
+  }
 
   document.getElementById("list").innerHTML = html;
 }
 
+
+/* =======================
+   🔥 ACTIONS
+======================= */
 function goAdd() {
   window.location.href = "form.html";
 }
@@ -51,10 +127,21 @@ function edit(id) {
 }
 
 async function del(id) {
-  await db.from("manuals").delete().eq("id", id);
-  loadData();
+  if (!confirm("ลบรายการนี้?")) return;
+
+  const { error } = await db.from("manuals").delete().eq("id", id);
+
+  if (error) {
+    alert(error.message);
+  } else {
+    loadData();
+  }
 }
 
+
+/* =======================
+   INIT
+======================= */
 loadData();
 </script>
 
