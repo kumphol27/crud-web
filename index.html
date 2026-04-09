@@ -16,7 +16,7 @@
 async function loadData() {
   const keyword = document.getElementById("search").value;
 
-  let query = supabase.from("manuals").select("*");
+  let query = db.from("manuals").select("*");
 
   if (keyword) {
     query = query.ilike("title", `%${keyword}%`);
@@ -51,7 +51,7 @@ function edit(id) {
 }
 
 async function del(id) {
-  await supabase.from("manuals").delete().eq("id", id);
+  await db.from("manuals").delete().eq("id", id);
   loadData();
 }
 
