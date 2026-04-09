@@ -1,16 +1,24 @@
 <!DOCTYPE html>
-<html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <title>เพิ่มข้อมูล</title>
+</head>
+
 <body>
 
-<h2>เพิ่มข้อมูล</h2
+<h2>เพิ่มข้อมูล</h2>
 
-<input id="title" placeholder="หัวข้อ"><br>
-<textarea id="description"></textarea><br>
-<input type="file" id="image_url"><br>
-<input type="file" id="pdf_url"><br>
+<input id="title" placeholder="หัวข้อ"><br><br>
+
+<textarea id="description" placeholder="รายละเอียด"></textarea><br><br>
+
+<input type="file" id="image_url"><br><br>
+<input type="file" id="pdf_url"><br><br>
 
 <button onclick="save()">บันทึก</button>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
 <script src="supabase.js"></script>
 
 <script>
@@ -19,16 +27,33 @@ const id = params.get("id");
 
 async function save() {
   try {
-    const title = document.getElementById("title").value;
-    const description = document.getElementById("description").value;
+    const titleEl = document.getElementById("title");
+    const descEl = document.getElementById("description");
 
-    const imageFile = document.getElementById("image_url").files[0];
-    const pdfFile = document.getElementById("pdf_url").files[0];
+    // ✅ กัน null
+    if (!titleEl || !descEl) {
+      alert("ไม่พบ input ในหน้า");
+      return;
+    }
+
+    const title = titleEl.value.trim();
+    const description = descEl.value.trim();
+
+    if (!title) {
+      alert("กรุณากรอกหัวข้อ");
+      return;
+    }
+
+    const imageInput = document.getElementById("image_url");
+    const pdfInput = document.getElementById("pdf_url");
+
+    const imageFile = imageInput.files[0];
+    const pdfFile = pdfInput.files[0];
 
     let imageUrl = "";
     let pdfUrl = "";
 
-    // ✅ upload image
+    // 🔥 upload image
     if (imageFile) {
       const { data, error } = await supabase.storage
         .from("files")
@@ -39,7 +64,7 @@ async function save() {
       imageUrl = `${SUPABASE_URL}/storage/v1/object/public/${data.path}`;
     }
 
-    // ✅ upload pdf
+    // 🔥 upload pdf
     if (pdfFile) {
       const { data, error } = await supabase.storage
         .from("files")
@@ -50,11 +75,11 @@ async function save() {
       pdfUrl = `${SUPABASE_URL}/storage/v1/object/public/${data.path}`;
     }
 
-    // ✅ insert database
+    // 🔥 insert database
     const { error } = await supabase.from("manuals").insert([
       {
-        title,
-        description,
+        title: title,
+        description: description,
         image_url: imageUrl,
         pdf_url: pdfUrl
       }
