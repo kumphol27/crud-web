@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+<body>
+
+<h2>เพิ่มข้อมูล</h2>
+
+<input id="title" placeholder="หัวข้อ"><br>
+<textarea id="description"></textarea><br>
+<input type="file" id="image"><br>
+<input type="file" id="pdf"><br>
+
+<button onclick="save()">บันทึก</button>
+
+<script src="supabase.js"></script>
+
+<script>
+const params = new URLSearchParams(window.location.search);
+const id = params.get("id");
+
+async function save() {
+  const title = document.getElementById("title").value;
+  const description = document.getElementById("description").value;
+
+  let imageUrl = "";
+  let pdfUrl = "";
+
+  const imageFile = document.getElementById("image").files[0];
+  const pdfFile = document.getElementById("pdf").files[0];
+
+  if (imageFile) {
+    const { data } = await supabase.storage
+      .from("files")
+      .upload(`images/${Date.now()}-${imageFile.name}`, imageFile);
+
+    imageUrl = `https://cicvdydnrgrgjdpeufuc.supabase.co/storage/v1/object/public/${data.path}`;
+  }
+
+  if (pdfFile) {
+    const { data } = await supabase.storage
+      .from("files")
+      .upload(`pdf/${Date.now()}-${pdfFile.name}`, pdfFile);
+
+    pdfUrl = `https://cicvdydnrgrgjdpeufuc.supabase.co/storage/v1/object/public/${data.path}`;
+  }
+
+  if (id) {
+    await supabase.from("manuals").update({ title, description }).eq("id", id);
+  } else {
+    await supabase.from("manuals").insert([
+      { title, description, image_url: imageUrl, pdf_url: pdfUrl }
+    ]);
+  }
+
+  alert("สำเร็จ");
+  window.location.href = "index.html";
+}
+</script>
+
+</body>
+</html>

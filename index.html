@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<body>
+
+<h2>รายการข้อมูล</h2>
+
+<input type="text" id="search" placeholder="ค้นหา..." onkeyup="loadData()">
+<button onclick="goAdd()">เพิ่ม</button>
+
+<div id="list"></div>
+
+<script src="supabase.js"></script>
+
+<script>
+async function loadData() {
+  const keyword = document.getElementById("search").value;
+
+  let query = supabase.from("manuals").select("*");
+
+  if (keyword) {
+    query = query.ilike("title", `%${keyword}%`);
+  }
+
+  const { data } = await query;
+
+  let html = "";
+
+  data.forEach(item => {
+    html += `
+      <div>
+        <h3>${item.title}</h3>
+        <img src="${item.image_url}" width="120"/>
+        <p>${item.description}</p>
+        <a href="${item.pdf_url}" target="_blank">PDF</a><br>
+        <button onclick="edit('${item.id}')">แก้ไข</button>
+        <button onclick="del('${item.id}')">ลบ</button>
+      </div>
+    `;
+  });
+
+  document.getElementById("list").innerHTML = html;
+}
+
+function goAdd() {
+  window.location.href = "form.html";
+}
+
+function edit(id) {
+  window.location.href = "form.html?id=" + id;
+}
+
+async function del(id) {
+  await supabase.from("manuals").delete().eq("id", id);
+  loadData();
+}
+
+loadData();
+</script>
+
+</body>
+</html>
