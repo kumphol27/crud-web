@@ -1,11 +1,45 @@
-<script>
-const db = supabase.createClient(
-  "https://cicvdydnrgrgjdpeufuc.supabase.co",
-  "sb_publishable_KRMgo0_VGMTqToKk-Ur-yQ_FUFOgXFm"
-);
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<title>รายการข้อมูล</title>
 
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+
+<style>
+body { background:#0f0f14; font-family:'Noto Sans Thai',sans-serif; }
+</style>
+</head>
+
+<body class="p-6">
+
+<div class="max-w-5xl mx-auto">
+
+<div class="flex justify-between mb-6">
+<h1 class="text-white text-xl">รายการข้อมูล</h1>
+<button onclick="goAdd()" class="bg-indigo-600 text-white px-4 py-2 rounded">+ เพิ่ม</button>
+</div>
+
+<input id="search" onkeyup="loadData()" placeholder="ค้นหา..."
+class="w-full mb-6 p-3 bg-[#18181f] text-white rounded">
+
+<div id="list" class="grid md:grid-cols-3 gap-4"></div>
+
+</div>
+
+<script>
+const SUPABASE_URL = "https://cicvdydnrgrgjdpeufuc.supabase.co";
+const SUPABASE_KEY = "sb_publishable_KRMgo0_VGMTqToKk-Ur-yQ_FUFOgXFm";
+
+const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+
+/* =======================
+   🔥 LOAD DATA
+======================= */
 async function loadData(){
-  const keyword = search.value;
+  const keyword = document.getElementById("search").value;
 
   let query = db.from("manuals").select("*").order("id",{ascending:false});
 
@@ -14,7 +48,11 @@ async function loadData(){
   }
 
   const { data, error } = await query;
-  if(error) return alert(error.message);
+
+  if(error){
+    alert(error.message);
+    return;
+  }
 
   let html = "";
 
@@ -24,29 +62,12 @@ async function loadData(){
 
     data.forEach(item => {
 
-      // 🔥 FIX รองรับ array
-      let images = [];
-
-      if(Array.isArray(item.image_url)){
-        images = item.image_url;
-      } else if(typeof item.image_url === "string" && item.image_url !== ""){
-        images = [item.image_url];
-      }
-
       html += `
-        <div class="bg-[#18181f] rounded-xl border border-[#27272a]">
+        <div class="bg-[#18181f] rounded-xl overflow-hidden border border-[#27272a]">
 
-          ${
-            images.length > 0
-            ? `
-              <div class="flex gap-2 overflow-x-auto p-2">
-                ${images.map(img => `
-                  <img src="${img}"
-                    class="h-28 rounded object-cover"
-                    onerror="this.src='https://via.placeholder.com/150'">
-                `).join("")}
-              </div>
-            `
+          ${item.image_url 
+            ? `<img src="${item.image_url}" class="w-full h-40 object-cover"
+                 onerror="this.src='https://via.placeholder.com/300x200?text=No+Image'">`
             : `<div class="h-40 flex items-center justify-center text-gray-500">No Image</div>`
           }
 
@@ -80,17 +101,39 @@ async function loadData(){
     });
   }
 
-  list.innerHTML = html;
+  document.getElementById("list").innerHTML = html;
 }
 
-function goAdd(){ location.href="form.html"; }
-function edit(id){ location.href="form.html?id="+id; }
+
+/* =======================
+   🔥 ACTION
+======================= */
+function goAdd(){
+  window.location.href="form.html";
+}
+
+function edit(id){
+  window.location.href="form.html?id=" + id;
+}
 
 async function del(id){
-  if(!confirm("ลบ?")) return;
-  await db.from("manuals").delete().eq("id",id);
-  loadData();
+  if(!confirm("ลบรายการนี้?")) return;
+
+  const { error } = await db.from("manuals").delete().eq("id",id);
+
+  if(error){
+    alert(error.message);
+  } else {
+    loadData();
+  }
 }
 
+
+/* =======================
+   INIT
+======================= */
 loadData();
 </script>
+
+</body>
+</html>
