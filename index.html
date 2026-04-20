@@ -9,8 +9,6 @@
 
 <style>
 body { background:#0f0f14; font-family:'Noto Sans Thai',sans-serif; }
-.img-scroll::-webkit-scrollbar { height:6px; }
-.img-scroll::-webkit-scrollbar-thumb { background:#444; border-radius:10px; }
 </style>
 </head>
 
@@ -64,29 +62,12 @@ async function loadData(){
 
     data.forEach(item => {
 
-      // 🔥 รองรับทั้ง string และ array
-      let images = [];
-
-      if(Array.isArray(item.image_url)){
-        images = item.image_url;
-      } else if(typeof item.image_url === "string" && item.image_url !== ""){
-        images = [item.image_url];
-      }
-
       html += `
         <div class="bg-[#18181f] rounded-xl overflow-hidden border border-[#27272a]">
 
-          ${
-            images.length > 0
-            ? `
-              <div class="flex gap-2 overflow-x-auto img-scroll p-2">
-                ${images.map(img => `
-                  <img src="${img}"
-                    class="h-32 rounded object-cover"
-                    onerror="this.src='https://via.placeholder.com/150?text=No+Image'">
-                `).join("")}
-              </div>
-            `
+          ${item.image_url 
+            ? `<img src="${item.image_url}" class="w-full h-40 object-cover"
+                 onerror="this.src='https://via.placeholder.com/300x200?text=No+Image'">`
             : `<div class="h-40 flex items-center justify-center text-gray-500">No Image</div>`
           }
 
