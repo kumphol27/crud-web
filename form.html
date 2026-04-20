@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>เพิ่มข้อมูล</title>
+<title>เพิ่ม / แก้ไขข้อมูล</title>
 
 <script src="https://cdn.tailwindcss.com/3.4.17"></script>
 <script src="https://cdn.jsdelivr.net/npm/lucide@0.263.0/dist/umd/lucide.min.js"></script>
@@ -22,13 +22,17 @@ body { background:#0f0f14; font-family:'Noto Sans Thai',sans-serif; }
 ← กลับ
 </button>
 
-<h2 class="text-white mb-4">เพิ่มข้อมูล</h2>
+<h2 id="form-title" class="text-white mb-4">เพิ่มข้อมูล</h2>
 
 <input id="title" placeholder="หัวข้อ"
 class="w-full p-3 mb-3 bg-[#0f0f14] border border-[#27272a] text-white rounded">
 
 <textarea id="description" placeholder="รายละเอียด"
 class="w-full p-3 mb-4 bg-[#0f0f14] border border-[#27272a] text-white rounded"></textarea>
+
+<!-- preview -->
+<img id="preview-img" class="mb-3 rounded hidden" style="max-height:150px;">
+<a id="preview-pdf" target="_blank" class="text-blue-400 text-sm hidden">เปิด PDF เดิม</a>
 
 <input type="file" id="image_url" class="mb-3 text-white">
 <input type="file" id="pdf_url" class="mb-5 text-white">
@@ -45,16 +49,68 @@ const SUPABASE_KEY = "sb_publishable_KRMgo0_VGMTqToKk-Ur-yQ_FUFOgXFm";
 
 const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+let editId = null;
+let oldImage = "";
+let oldPdf = "";
+
+/* =======================
+   🔙 กลับ
+======================= */
 function goBack(){
   window.location.href = "index.html";
 }
 
+/* =======================
+   🔥 โหลดข้อมูล (กรณีแก้ไข)
+======================= */
+async function loadEditData(){
+  const params = new URLSearchParams(window.location.search);
+  const id = params.get("id");
+
+  if(!id) return;
+
+  editId = id;
+  document.getElementById("form-title").innerText = "แก้ไขข้อมูล";
+
+  const { data, error } = await db.from("manuals").select("*").eq("id", id).single();
+
+  if(error){
+    alert(error.message);
+    return;
+  }
+
+  document.getElementById("title").value = data.title;
+  document.getElementById("description").value = data.description;
+
+  oldImage = data.image_url;
+  oldPdf = data.pdf_url;
+
+  // preview
+  if(oldImage){
+    const img = document.getElementById("preview-img");
+    img.src = oldImage;
+    img.classList.remove("hidden");
+  }
+
+  if(oldPdf){
+    const pdf = document.getElementById("preview-pdf");
+    pdf.href = oldPdf;
+    pdf.classList.remove("hidden");
+  }
+}
+
+/* =======================
+   🔥 helper
+======================= */
 function makeSafeName(name){
   return name.toLowerCase()
     .replace(/\s+/g,"_")
     .replace(/[^a-z0-9.]/g,"");
 }
 
+/* =======================
+   💾 SAVE / UPDATE
+======================= */
 async function save(){
   try{
     const title = document.getElementById("title").value.trim();
@@ -68,10 +124,10 @@ async function save(){
     const imageFile = document.getElementById("image_url").files[0];
     const pdfFile = document.getElementById("pdf_url").files[0];
 
-    let imageUrl = "";
-    let pdfUrl = "";
+    let imageUrl = oldImage;
+    let pdfUrl = oldPdf;
 
-    // ✅ upload image
+    // ✅ upload image ใหม่ (ถ้ามี)
     if(imageFile){
       const path = `images/${Date.now()}-${makeSafeName(imageFile.name)}`;
 
@@ -82,7 +138,7 @@ async function save(){
       imageUrl = data.publicUrl;
     }
 
-    // ✅ upload pdf
+    // ✅ upload pdf ใหม่ (ถ้ามี)
     if(pdfFile){
       const path = `pdf/${Date.now()}-${makeSafeName(pdfFile.name)}`;
 
@@ -93,14 +149,27 @@ async function save(){
       pdfUrl = data.publicUrl;
     }
 
-    // ✅ insert DB
-    const { error } = await db.from("manuals").insert([
-      { title, description, image_url: imageUrl, pdf_url: pdfUrl }
-    ]);
+    // ✅ ถ้าเป็น edit → update
+    if(editId){
+      const { error } = await db.from("manuals")
+        .update({ title, description, image_url: imageUrl, pdf_url: pdfUrl })
+        .eq("id", editId);
 
-    if(error) throw error;
+      if(error) throw error;
 
-    alert("บันทึกสำเร็จ ✅");
+      alert("แก้ไขสำเร็จ ✅");
+    }
+    // ✅ ถ้าเป็น add → insert
+    else{
+      const { error } = await db.from("manuals").insert([
+        { title, description, image_url: imageUrl, pdf_url: pdfUrl }
+      ]);
+
+      if(error) throw error;
+
+      alert("เพิ่มข้อมูลสำเร็จ ✅");
+    }
+
     window.location.href = "index.html";
 
   }catch(err){
@@ -108,6 +177,11 @@ async function save(){
     alert("ERROR: " + err.message);
   }
 }
+
+/* =======================
+   INIT
+======================= */
+loadEditData();
 </script>
 
 </body>
