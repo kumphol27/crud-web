@@ -34,6 +34,10 @@ const SUPABASE_KEY = "sb_publishable_KRMgo0_VGMTqToKk-Ur-yQ_FUFOgXFm";
 
 const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+
+/* =======================
+   🔥 LOAD DATA
+======================= */
 async function loadData(){
   const keyword = document.getElementById("search").value;
 
@@ -44,6 +48,7 @@ async function loadData(){
   }
 
   const { data, error } = await query;
+
   if(error){
     alert(error.message);
     return;
@@ -51,52 +56,82 @@ async function loadData(){
 
   let html = "";
 
-  data.forEach(item => {
+  if(!data || data.length === 0){
+    html = `<p class="text-gray-400">ไม่มีข้อมูล</p>`;
+  } else {
 
-    console.log("IMAGE URL:", item.image_url); // 🔍 debug
+    data.forEach(item => {
 
-    html += `
-      <div class="bg-[#18181f] rounded-xl overflow-hidden">
+      html += `
+        <div class="bg-[#18181f] rounded-xl overflow-hidden border border-[#27272a]">
 
-        ${item.image_url 
-          ? `<img src="${item.image_url}" class="w-full h-40 object-cover"
-               onerror="this.src='https://via.placeholder.com/300x200?text=No+Image'">`
-          : `<div class="h-40 flex items-center justify-center text-gray-500">No Image</div>`
-        }
+          ${item.image_url 
+            ? `<img src="${item.image_url}" class="w-full h-40 object-cover"
+                 onerror="this.src='https://via.placeholder.com/300x200?text=No+Image'">`
+            : `<div class="h-40 flex items-center justify-center text-gray-500">No Image</div>`
+          }
 
-        <div class="p-4">
-          <h3 class="text-white">${item.title}</h3>
-          <p class="text-gray-400 text-sm">${item.description || ''}</p>
+          <div class="p-4">
+            <h3 class="text-white font-semibold">${item.title}</h3>
+            <p class="text-gray-400 text-sm mb-3">${item.description || ''}</p>
 
-          <a href="${item.pdf_url || '#'}" target="_blank"
-          class="block mt-2 text-center bg-indigo-600 text-white p-2 rounded">
-          PDF
-          </a>
+            <div class="flex gap-2">
 
-          <button onclick="del('${item.id}')"
-          class="mt-2 w-full bg-red-500 text-white p-2 rounded">
-          ลบ
-          </button>
+              <a href="${item.pdf_url || '#'}" target="_blank"
+                class="flex-1 bg-indigo-600 text-white text-xs p-2 rounded text-center">
+                PDF
+              </a>
+
+              <button onclick="edit('${item.id}')"
+                class="flex-1 border border-indigo-500 text-indigo-400 text-xs p-2 rounded">
+                แก้ไข
+              </button>
+
+              <button onclick="del('${item.id}')"
+                class="bg-red-500 text-white px-3 rounded text-xs">
+                ลบ
+              </button>
+
+            </div>
+
+          </div>
+
         </div>
-
-      </div>
-    `;
-  });
+      `;
+    });
+  }
 
   document.getElementById("list").innerHTML = html;
 }
 
+
+/* =======================
+   🔥 ACTION
+======================= */
 function goAdd(){
   window.location.href="form.html";
 }
 
-async function del(id){
-  if(!confirm("ลบ?")) return;
-
-  await db.from("manuals").delete().eq("id",id);
-  loadData();
+function edit(id){
+  window.location.href="form.html?id=" + id;
 }
 
+async function del(id){
+  if(!confirm("ลบรายการนี้?")) return;
+
+  const { error } = await db.from("manuals").delete().eq("id",id);
+
+  if(error){
+    alert(error.message);
+  } else {
+    loadData();
+  }
+}
+
+
+/* =======================
+   INIT
+======================= */
 loadData();
 </script>
 
