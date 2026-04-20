@@ -4,93 +4,127 @@ const db = supabase.createClient(
   "sb_publishable_KRMgo0_VGMTqToKk-Ur-yQ_FUFOgXFm"
 );
 
-async function loadData(){
-  const keyword = search.value;
+let editId = null;
+let oldImages = [];
+let oldPdf = "";
 
-  let query = db.from("manuals").select("*").order("id",{ascending:false});
+/* ======================= */
+function goBack(){
+  location.href = "index.html";
+}
 
-  if(keyword){
-    query = query.ilike("title", `%${keyword}%`);
-  }
+/* ======================= */
+async function loadEditData(){
+  const id = new URLSearchParams(location.search).get("id");
+  if(!id) return;
 
-  const { data, error } = await query;
+  editId = id;
+  document.getElementById("form-title").innerText = "แก้ไขข้อมูล";
+
+  const { data, error } = await db.from("manuals").select("*").eq("id", id).single();
   if(error) return alert(error.message);
 
-  let html = "";
+  title.value = data.title;
+  description.value = data.description;
 
-  if(!data || data.length === 0){
-    html = `<p class="text-gray-400">ไม่มีข้อมูล</p>`;
+  // 🔥 FIX: บังคับให้เป็น array
+  if(Array.isArray(data.image_url)){
+    oldImages = data.image_url;
+  } else if(typeof data.image_url === "string" && data.image_url !== ""){
+    oldImages = [data.image_url];
   } else {
-
-    data.forEach(item => {
-
-      // 🔥 FIX รองรับ array
-      let images = [];
-
-      if(Array.isArray(item.image_url)){
-        images = item.image_url;
-      } else if(typeof item.image_url === "string" && item.image_url !== ""){
-        images = [item.image_url];
-      }
-
-      html += `
-        <div class="bg-[#18181f] rounded-xl border border-[#27272a]">
-
-          ${
-            images.length > 0
-            ? `
-              <div class="flex gap-2 overflow-x-auto p-2">
-                ${images.map(img => `
-                  <img src="${img}"
-                    class="h-28 rounded object-cover"
-                    onerror="this.src='https://via.placeholder.com/150'">
-                `).join("")}
-              </div>
-            `
-            : `<div class="h-40 flex items-center justify-center text-gray-500">No Image</div>`
-          }
-
-          <div class="p-4">
-            <h3 class="text-white font-semibold">${item.title}</h3>
-            <p class="text-gray-400 text-sm mb-3">${item.description || ''}</p>
-
-            <div class="flex gap-2">
-
-              <a href="${item.pdf_url || '#'}" target="_blank"
-                class="flex-1 bg-indigo-600 text-white text-xs p-2 rounded text-center">
-                PDF
-              </a>
-
-              <button onclick="edit('${item.id}')"
-                class="flex-1 border border-indigo-500 text-indigo-400 text-xs p-2 rounded">
-                แก้ไข
-              </button>
-
-              <button onclick="del('${item.id}')"
-                class="bg-red-500 text-white px-3 rounded text-xs">
-                ลบ
-              </button>
-
-            </div>
-
-          </div>
-
-        </div>
-      `;
-    });
+    oldImages = [];
   }
 
-  list.innerHTML = html;
+  oldPdf = data.pdf_url || "";
+
+  showPreview(oldImages);
+
+  if(oldPdf){
+    preview_pdf.href = oldPdf;
+    preview_pdf.classList.remove("hidden");
+  }
 }
 
-function goAdd(){ location.href="form.html"; }
-function edit(id){ location.href="form.html?id="+id; }
+/* ======================= */
+function showPreview(images){
+  const box = document.getElementById("preview-container");
+  box.innerHTML = "";
 
-async function del(id){
-  if(!confirm("ลบ?")) return;
-  await db.from("manuals").delete().eq("id",id);
-  loadData();
+  images.forEach(img=>{
+    box.innerHTML += `<img src="${img}" class="preview-img">`;
+  });
 }
 
-loadData();
+/* ======================= */
+function makeSafeName(name){
+  return name.toLowerCase()
+    .replace(/\s+/g,"_")
+    .replace(/[^a-z0-9.]/g,"");
+}
+
+/* ======================= */
+async function save(){
+  try{
+    const title = document.getElementById("title").value.trim();
+    const description = document.getElementById("description").value.trim();
+
+    if(!title) return alert("กรุณากรอกหัวข้อ");
+
+    const imageFiles = document.getElementById("image_url").files;
+    const pdfFile = document.getElementById("pdf_url").files[0];
+
+    let imageUrls = [...oldImages];
+    let pdfUrl = oldPdf;
+
+    /* 🔥 FIX: unique path กันชนกัน */
+    for(let i=0;i<imageFiles.length;i++){
+      const file = imageFiles[i];
+
+      const path = `images/${crypto.randomUUID()}-${makeSafeName(file.name)}`;
+
+      const { error } = await db.storage.from("files").upload(path, file);
+      if(error) throw error;
+
+      const { data } = db.storage.from("files").getPublicUrl(path);
+      imageUrls.push(data.publicUrl);
+    }
+
+    /* pdf */
+    if(pdfFile){
+      const path = `pdf/${crypto.randomUUID()}-${makeSafeName(pdfFile.name)}`;
+
+      const { error } = await db.storage.from("files").upload(path, pdfFile);
+      if(error) throw error;
+
+      const { data } = db.storage.from("files").getPublicUrl(path);
+      pdfUrl = data.publicUrl;
+    }
+
+    if(editId){
+      const { error } = await db.from("manuals")
+        .update({ title, description, image_url: imageUrls, pdf_url: pdfUrl })
+        .eq("id", editId);
+
+      if(error) throw error;
+
+      alert("แก้ไขสำเร็จ");
+    } else {
+      const { error } = await db.from("manuals")
+        .insert([{ title, description, image_url: imageUrls, pdf_url: pdfUrl }]);
+
+      if(error) throw error;
+
+      alert("เพิ่มสำเร็จ");
+    }
+
+    location.href = "index.html";
+
+  }catch(err){
+    console.error(err);
+    alert(err.message);
+  }
+}
+
+loadEditData();
 </script>
