@@ -1,98 +1,146 @@
+<!doctype html>
+<html lang="th" class="h-full">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>เพิ่ม / แก้ไขข้อมูล</title>
+
+<script src="https://cdn.tailwindcss.com/3.4.17"></script>
+<script src="https://cdn.jsdelivr.net/npm/lucide@0.263.0/dist/umd/lucide.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+
+<style>
+body { background:#0f0f14; font-family:'Noto Sans Thai',sans-serif; }
+</style>
+</head>
+
+<body class="p-6">
+
+<div class="max-w-lg mx-auto bg-[#18181f] p-6 rounded-xl border border-[#27272a]">
+
+<button onclick="goBack()" class="mb-4 text-gray-400 hover:text-white flex gap-2">
+← กลับ
+</button>
+
+<h2 id="form-title" class="text-white mb-4">เพิ่มข้อมูล</h2>
+
+<input id="title" placeholder="หัวข้อ"
+class="w-full p-3 mb-3 bg-[#0f0f14] border border-[#27272a] text-white rounded">
+
+<textarea id="description" placeholder="รายละเอียด"
+class="w-full p-3 mb-4 bg-[#0f0f14] border border-[#27272a] text-white rounded"></textarea>
+
+<!-- preview -->
+<img id="preview-img" class="mb-3 rounded hidden" style="max-height:150px;">
+<a id="preview-pdf" target="_blank" class="text-blue-400 text-sm hidden">เปิด PDF เดิม</a>
+
+<input type="file" id="image_url" class="mb-3 text-white">
+<input type="file" id="pdf_url" class="mb-5 text-white">
+
+<button onclick="save()" class="w-full bg-indigo-600 text-white p-3 rounded">
+บันทึก
+</button>
+
+</div>
+
 <script>
-const db = supabase.createClient(
-  "https://cicvdydnrgrgjdpeufuc.supabase.co",
-  "sb_publishable_KRMgo0_VGMTqToKk-Ur-yQ_FUFOgXFm"
-);
+const SUPABASE_URL = "https://cicvdydnrgrgjdpeufuc.supabase.co";
+const SUPABASE_KEY = "sb_publishable_KRMgo0_VGMTqToKk-Ur-yQ_FUFOgXFm";
+
+const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 let editId = null;
-let oldImages = [];
+let oldImage = "";
 let oldPdf = "";
 
-/* ======================= */
+/* =======================
+   🔙 กลับ
+======================= */
 function goBack(){
-  location.href = "index.html";
+  window.location.href = "index.html";
 }
 
-/* ======================= */
+/* =======================
+   🔥 โหลดข้อมูล (กรณีแก้ไข)
+======================= */
 async function loadEditData(){
-  const id = new URLSearchParams(location.search).get("id");
+  const params = new URLSearchParams(window.location.search);
+  const id = params.get("id");
+
   if(!id) return;
 
   editId = id;
   document.getElementById("form-title").innerText = "แก้ไขข้อมูล";
 
   const { data, error } = await db.from("manuals").select("*").eq("id", id).single();
-  if(error) return alert(error.message);
 
-  title.value = data.title;
-  description.value = data.description;
-
-  // 🔥 FIX: บังคับให้เป็น array
-  if(Array.isArray(data.image_url)){
-    oldImages = data.image_url;
-  } else if(typeof data.image_url === "string" && data.image_url !== ""){
-    oldImages = [data.image_url];
-  } else {
-    oldImages = [];
+  if(error){
+    alert(error.message);
+    return;
   }
 
-  oldPdf = data.pdf_url || "";
+  document.getElementById("title").value = data.title;
+  document.getElementById("description").value = data.description;
 
-  showPreview(oldImages);
+  oldImage = data.image_url;
+  oldPdf = data.pdf_url;
+
+  // preview
+  if(oldImage){
+    const img = document.getElementById("preview-img");
+    img.src = oldImage;
+    img.classList.remove("hidden");
+  }
 
   if(oldPdf){
-    preview_pdf.href = oldPdf;
-    preview_pdf.classList.remove("hidden");
+    const pdf = document.getElementById("preview-pdf");
+    pdf.href = oldPdf;
+    pdf.classList.remove("hidden");
   }
 }
 
-/* ======================= */
-function showPreview(images){
-  const box = document.getElementById("preview-container");
-  box.innerHTML = "";
-
-  images.forEach(img=>{
-    box.innerHTML += `<img src="${img}" class="preview-img">`;
-  });
-}
-
-/* ======================= */
+/* =======================
+   🔥 helper
+======================= */
 function makeSafeName(name){
   return name.toLowerCase()
     .replace(/\s+/g,"_")
     .replace(/[^a-z0-9.]/g,"");
 }
 
-/* ======================= */
+/* =======================
+   💾 SAVE / UPDATE
+======================= */
 async function save(){
   try{
     const title = document.getElementById("title").value.trim();
     const description = document.getElementById("description").value.trim();
 
-    if(!title) return alert("กรุณากรอกหัวข้อ");
+    if(!title){
+      alert("กรุณากรอกหัวข้อ");
+      return;
+    }
 
-    const imageFiles = document.getElementById("image_url").files;
+    const imageFile = document.getElementById("image_url").files[0];
     const pdfFile = document.getElementById("pdf_url").files[0];
 
-    let imageUrls = [...oldImages];
+    let imageUrl = oldImage;
     let pdfUrl = oldPdf;
 
-    /* 🔥 FIX: unique path กันชนกัน */
-    for(let i=0;i<imageFiles.length;i++){
-      const file = imageFiles[i];
+    // ✅ upload image ใหม่ (ถ้ามี)
+    if(imageFile){
+      const path = `images/${Date.now()}-${makeSafeName(imageFile.name)}`;
 
-      const path = `images/${crypto.randomUUID()}-${makeSafeName(file.name)}`;
-
-      const { error } = await db.storage.from("files").upload(path, file);
+      const { error } = await db.storage.from("files").upload(path, imageFile);
       if(error) throw error;
 
       const { data } = db.storage.from("files").getPublicUrl(path);
-      imageUrls.push(data.publicUrl);
+      imageUrl = data.publicUrl;
     }
 
-    /* pdf */
+    // ✅ upload pdf ใหม่ (ถ้ามี)
     if(pdfFile){
-      const path = `pdf/${crypto.randomUUID()}-${makeSafeName(pdfFile.name)}`;
+      const path = `pdf/${Date.now()}-${makeSafeName(pdfFile.name)}`;
 
       const { error } = await db.storage.from("files").upload(path, pdfFile);
       if(error) throw error;
@@ -101,30 +149,40 @@ async function save(){
       pdfUrl = data.publicUrl;
     }
 
+    // ✅ ถ้าเป็น edit → update
     if(editId){
       const { error } = await db.from("manuals")
-        .update({ title, description, image_url: imageUrls, pdf_url: pdfUrl })
+        .update({ title, description, image_url: imageUrl, pdf_url: pdfUrl })
         .eq("id", editId);
 
       if(error) throw error;
 
-      alert("แก้ไขสำเร็จ");
-    } else {
-      const { error } = await db.from("manuals")
-        .insert([{ title, description, image_url: imageUrls, pdf_url: pdfUrl }]);
+      alert("แก้ไขสำเร็จ ✅");
+    }
+    // ✅ ถ้าเป็น add → insert
+    else{
+      const { error } = await db.from("manuals").insert([
+        { title, description, image_url: imageUrl, pdf_url: pdfUrl }
+      ]);
 
       if(error) throw error;
 
-      alert("เพิ่มสำเร็จ");
+      alert("เพิ่มข้อมูลสำเร็จ ✅");
     }
 
-    location.href = "index.html";
+    window.location.href = "index.html";
 
   }catch(err){
     console.error(err);
-    alert(err.message);
+    alert("ERROR: " + err.message);
   }
 }
 
+/* =======================
+   INIT
+======================= */
 loadEditData();
 </script>
+
+</body>
+</html>
