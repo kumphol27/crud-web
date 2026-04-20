@@ -78,8 +78,12 @@ async function save(){
       const { error } = await db.storage.from("files").upload(path, imageFile);
       if(error) throw error;
 
-      const { data } = db.storage.from("files").getPublicUrl(path);
-      imageUrl = data.publicUrl;
+      const { data: publicUrl } = db.storage
+  .from("files")
+  .getPublicUrl(filePath);
+
+      imageUrl = publicUrl.publicUrl;
+;
     }
 
     // ✅ upload pdf
@@ -89,8 +93,11 @@ async function save(){
       const { error } = await db.storage.from("files").upload(path, pdfFile);
       if(error) throw error;
 
-      const { data } = db.storage.from("files").getPublicUrl(path);
-      pdfUrl = data.publicUrl;
+      const { data: publicUrl } = db.storage
+  .from("files")
+  .getPublicUrl(filePath);
+
+pdfUrl = publicUrl.publicUrl;
     }
 
     // ✅ insert
