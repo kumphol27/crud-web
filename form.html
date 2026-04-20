@@ -1,127 +1,3 @@
-<!doctype html>
-<html lang="th" class="h-full">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>เพิ่ม / แก้ไขข้อมูล</title>
-
-<script src="https://cdn.tailwindcss.com/3.4.17"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
-
-<style>
-body { background:#0f0f14; font-family:'Noto Sans Thai',sans-serif; }
-.preview-img { height:100px; object-fit:cover; border-radius:8px; }
-</style>
-</head>
-
-<body class="p-6">
-
-<div class="max-w-lg mx-auto bg-[#18181f] p-6 rounded-xl border border-[#27272a]">
-
-<button onclick="goBack()" class="mb-4 text-gray-400 hover:text-white">
-← กลับ
-</button>
-
-<h2 id="form-title" class="text-white mb-4">เพิ่มข้อมูล</h2>
-
-<input id="title" placeholder="หัวข้อ"
-class="w-full p-3 mb-3 bg-[#0f0f14] border border-[#27272a] text-white rounded">
-
-<textarea id="description" placeholder="รายละเอียด"
-class="w-full p-3 mb-4 bg-[#0f0f14] border border-[#27272a] text-white rounded"></textarea>
-
-<!-- 🔥 preview images -->
-<div id="preview-container" class="flex gap-2 flex-wrap mb-3"></div>
-
-<!-- 🔥 IMAGE BUTTON -->
-<label class="block mb-2 cursor-pointer bg-[#27272a] text-white p-3 rounded text-center hover:bg-[#3f3f46]">
-  📷 Choose Image
-  <input type="file" id="image_url" multiple hidden>
-</label>
-<p id="image-name" class="text-green-400 text-sm mb-3"></p>
-
-<!-- 🔥 PDF BUTTON -->
-<a id="preview-pdf" target="_blank" class="text-blue-400 text-sm hidden mb-2 block">เปิด PDF เดิม</a>
-
-<label class="block mb-2 cursor-pointer bg-[#27272a] text-white p-3 rounded text-center hover:bg-[#3f3f46]">
-  📄 Choose PDF
-  <input type="file" id="pdf_url" hidden>
-</label>
-<p id="pdf-name" class="text-green-400 text-sm mb-5"></p>
-
-<button onclick="save()" class="w-full bg-indigo-600 text-white p-3 rounded">
-บันทึก
-</button>
-
-</div>
-
-<script>
-const SUPABASE_URL = "https://cicvdydnrgrgjdpeufuc.supabase.co";
-const SUPABASE_KEY = "sb_publishable_KRMgo0_VGMTqToKk-Ur-yQ_FUFOgXFm";
-
-const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
-let editId = null;
-let oldImages = [];
-let oldPdf = "";
-
-/* ======================= */
-function goBack(){
-  window.location.href = "index.html";
-}
-
-/* ======================= */
-async function loadEditData(){
-  const params = new URLSearchParams(window.location.search);
-  const id = params.get("id");
-
-  if(!id) return;
-
-  editId = id;
-  document.getElementById("form-title").innerText = "แก้ไขข้อมูล";
-
-  const { data } = await db.from("manuals").select("*").eq("id", id).single();
-
-  document.getElementById("title").value = data.title;
-  document.getElementById("description").value = data.description;
-
-  oldImages = data.image_url || [];
-  oldPdf = data.pdf_url;
-
-  // preview รูป
-  const container = document.getElementById("preview-container");
-  container.innerHTML = "";
-  oldImages.forEach(url=>{
-    container.innerHTML += `<img src="${url}" class="preview-img">`;
-  });
-
-  if(oldPdf){
-    const pdf = document.getElementById("preview-pdf");
-    pdf.href = oldPdf;
-    pdf.classList.remove("hidden");
-  }
-}
-
-/* ======================= */
-function makeSafeName(name){
-  return name.toLowerCase()
-    .replace(/\s+/g,"_")
-    .replace(/[^a-z0-9.]/g,"");
-}
-
-/* =======================
-   🔥 SHOW FILE NAME
-======================= */
-document.getElementById("image_url").addEventListener("change", function(){
-  const names = [...this.files].map(f => f.name).join(", ");
-  document.getElementById("image-name").innerText = names;
-});
-
-document.getElementById("pdf_url").addEventListener("change", function(){
-  document.getElementById("pdf-name").innerText = this.files[0]?.name || "";
-});
-
-/* ======================= */
 async function save(){
   try{
     const title = document.getElementById("title").value.trim();
@@ -138,22 +14,35 @@ async function save(){
     let imageUrls = [...oldImages];
     let pdfUrl = oldPdf;
 
-    // 🔥 upload หลายรูป
+    /* =======================
+       🔥 upload multiple image (FIX)
+    ======================= */
     if(imageFiles.length > 0){
-      for(let file of imageFiles){
-        const path = `images/${Date.now()}-${makeSafeName(file.name)}`;
 
-        const { error } = await db.storage.from("files").upload(path, file);
+      for(let i = 0; i < imageFiles.length; i++){
+        const file = imageFiles[i];
+
+        const path = `images/${Date.now()}-${i}-${Math.random()}-${makeSafeName(file.name)}`;
+
+        const { error } = await db.storage
+          .from("files")
+          .upload(path, file);
+
         if(error) throw error;
 
-        const { data } = db.storage.from("files").getPublicUrl(path);
+        const { data } = db.storage
+          .from("files")
+          .getPublicUrl(path);
+
         imageUrls.push(data.publicUrl);
       }
     }
 
-    // 🔥 upload pdf
+    /* =======================
+       🔥 upload pdf
+    ======================= */
     if(pdfFile){
-      const path = `pdf/${Date.now()}-${makeSafeName(pdfFile.name)}`;
+      const path = `pdf/${Date.now()}-${Math.random()}-${makeSafeName(pdfFile.name)}`;
 
       const { error } = await db.storage.from("files").upload(path, pdfFile);
       if(error) throw error;
@@ -162,16 +51,31 @@ async function save(){
       pdfUrl = data.publicUrl;
     }
 
+    /* =======================
+       🔥 save DB
+    ======================= */
     if(editId){
-      await db.from("manuals")
-        .update({ title, description, image_url: imageUrls, pdf_url: pdfUrl })
+      const { error } = await db.from("manuals")
+        .update({
+          title,
+          description,
+          image_url: imageUrls,
+          pdf_url: pdfUrl
+        })
         .eq("id", editId);
+
+      if(error) throw error;
 
       alert("แก้ไขสำเร็จ");
     } else {
-      await db.from("manuals").insert([
-        { title, description, image_url: imageUrls, pdf_url: pdfUrl }
-      ]);
+      const { error } = await db.from("manuals").insert([{
+        title,
+        description,
+        image_url: imageUrls,
+        pdf_url: pdfUrl
+      }]);
+
+      if(error) throw error;
 
       alert("เพิ่มสำเร็จ");
     }
@@ -183,9 +87,3 @@ async function save(){
     console.error(err);
   }
 }
-
-loadEditData();
-</script>
-
-</body>
-</html>
