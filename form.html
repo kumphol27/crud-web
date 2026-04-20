@@ -33,12 +33,21 @@ class="w-full p-3 mb-4 bg-[#0f0f14] border border-[#27272a] text-white rounded">
 <!-- 🔥 preview images -->
 <div id="preview-container" class="flex gap-2 flex-wrap mb-3"></div>
 
-<!-- 🔥 multiple image -->
-<input type="file" id="image_url" multiple class="mb-3 text-white">
+<!-- 🔥 IMAGE BUTTON -->
+<label class="block mb-2 cursor-pointer bg-[#27272a] text-white p-3 rounded text-center hover:bg-[#3f3f46]">
+  📷 Choose Image
+  <input type="file" id="image_url" multiple hidden>
+</label>
+<p id="image-name" class="text-green-400 text-sm mb-3"></p>
 
-<!-- PDF -->
-<a id="preview-pdf" target="_blank" class="text-blue-400 text-sm hidden mb-2">เปิด PDF เดิม</a>
-<input type="file" id="pdf_url" class="mb-5 text-white">
+<!-- 🔥 PDF BUTTON -->
+<a id="preview-pdf" target="_blank" class="text-blue-400 text-sm hidden mb-2 block">เปิด PDF เดิม</a>
+
+<label class="block mb-2 cursor-pointer bg-[#27272a] text-white p-3 rounded text-center hover:bg-[#3f3f46]">
+  📄 Choose PDF
+  <input type="file" id="pdf_url" hidden>
+</label>
+<p id="pdf-name" class="text-green-400 text-sm mb-5"></p>
 
 <button onclick="save()" class="w-full bg-indigo-600 text-white p-3 rounded">
 บันทึก
@@ -53,7 +62,7 @@ const SUPABASE_KEY = "sb_publishable_KRMgo0_VGMTqToKk-Ur-yQ_FUFOgXFm";
 const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 let editId = null;
-let oldImages = []; // 🔥 เปลี่ยนเป็น array
+let oldImages = [];
 let oldPdf = "";
 
 /* ======================= */
@@ -76,10 +85,10 @@ async function loadEditData(){
   document.getElementById("title").value = data.title;
   document.getElementById("description").value = data.description;
 
-  oldImages = data.image_url || []; // 🔥 array
+  oldImages = data.image_url || [];
   oldPdf = data.pdf_url;
 
-  // 🔥 preview images
+  // preview รูป
   const container = document.getElementById("preview-container");
   container.innerHTML = "";
   oldImages.forEach(url=>{
@@ -100,6 +109,18 @@ function makeSafeName(name){
     .replace(/[^a-z0-9.]/g,"");
 }
 
+/* =======================
+   🔥 SHOW FILE NAME
+======================= */
+document.getElementById("image_url").addEventListener("change", function(){
+  const names = [...this.files].map(f => f.name).join(", ");
+  document.getElementById("image-name").innerText = names;
+});
+
+document.getElementById("pdf_url").addEventListener("change", function(){
+  document.getElementById("pdf-name").innerText = this.files[0]?.name || "";
+});
+
 /* ======================= */
 async function save(){
   try{
@@ -114,12 +135,10 @@ async function save(){
     const imageFiles = document.getElementById("image_url").files;
     const pdfFile = document.getElementById("pdf_url").files[0];
 
-    let imageUrls = [...oldImages]; // 🔥 copy เดิม
+    let imageUrls = [...oldImages];
     let pdfUrl = oldPdf;
 
-    /* =======================
-       🔥 upload multiple image
-    ======================= */
+    // 🔥 upload หลายรูป
     if(imageFiles.length > 0){
       for(let file of imageFiles){
         const path = `images/${Date.now()}-${makeSafeName(file.name)}`;
@@ -128,13 +147,11 @@ async function save(){
         if(error) throw error;
 
         const { data } = db.storage.from("files").getPublicUrl(path);
-        imageUrls.push(data.publicUrl); // 🔥 push เข้า array
+        imageUrls.push(data.publicUrl);
       }
     }
 
-    /* =======================
-       🔥 upload pdf
-    ======================= */
+    // 🔥 upload pdf
     if(pdfFile){
       const path = `pdf/${Date.now()}-${makeSafeName(pdfFile.name)}`;
 
@@ -145,9 +162,6 @@ async function save(){
       pdfUrl = data.publicUrl;
     }
 
-    /* =======================
-       🔥 save DB
-    ======================= */
     if(editId){
       await db.from("manuals")
         .update({ title, description, image_url: imageUrls, pdf_url: pdfUrl })
