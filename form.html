@@ -34,11 +34,16 @@ class="w-full p-3 mb-4 bg-[#0f0f14] border border-[#27272a] text-white rounded">
 <div id="preview-container" class="flex gap-2 flex-wrap mb-3"></div>
 
 <!-- 🔥 multiple image -->
-<input type="file" id="image_url" multiple class="mb-3 text-white">
+<label class="block mb-3 cursor-pointer bg-[#27272a] text-white p-3 rounded text-center">
+  📷 Choose Image
+  <input type="file" id="image_url" multiple hidden>
+</label>
 
 <!-- PDF -->
-<a id="preview-pdf" target="_blank" class="text-blue-400 text-sm hidden mb-2">เปิด PDF เดิม</a>
-<input type="file" id="pdf_url" class="mb-5 text-white">
+<label class="block mb-5 cursor-pointer bg-[#27272a] text-white p-3 rounded text-center">
+  📄 Choose PDF
+  <input type="file" id="pdf_url" hidden>
+</label>
 
 <button onclick="save()" class="w-full bg-indigo-600 text-white p-3 rounded">
 บันทึก
