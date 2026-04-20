@@ -34,8 +34,15 @@ class="w-full p-3 mb-4 bg-[#0f0f14] border border-[#27272a] text-white rounded">
 <img id="preview-img" class="mb-3 rounded hidden" style="max-height:150px;">
 <a id="preview-pdf" target="_blank" class="text-blue-400 text-sm hidden">เปิด PDF เดิม</a>
 
-<input type="file" id="image_url" class="mb-3 text-white">
-<input type="file" id="pdf_url" class="mb-5 text-white">
+<!-- 📷 IMAGE -->
+<label class="block text-sm text-gray-400 mb-1">เลือกรูปภาพ</label>
+<input type="file" id="image_url" accept="image/*"
+class="mb-4 w-full text-white bg-[#0f0f14] border border-[#27272a] p-2 rounded">
+
+<!-- 📄 PDF -->
+<label class="block text-sm text-gray-400 mb-1">เลือก PDF</label>
+<input type="file" id="pdf_url" accept="application/pdf"
+class="mb-5 w-full text-white bg-[#0f0f14] border border-[#27272a] p-2 rounded">
 
 <button onclick="save()" class="w-full bg-indigo-600 text-white p-3 rounded">
 บันทึก
